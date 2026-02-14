@@ -1,4 +1,4 @@
-# RealTime Voice with Multi-Agent Orchestration using LangGraph (Self-Hosted LiveKit + Agent + Frontend)
+# Multi-Agent Orchestration using LangGraph (Self-Hosted LiveKit + Agent + Frontend)
 
 A production-ready starter to run a **self-hosted LiveKit voice assistant stack** with:
 - **LiveKit server** (media + signaling)
@@ -406,3 +406,4 @@ voice-ai/
 ---
 
 If you want, the next improvement is I can make your compose setup environment-driven (no manual URL editing between local/prod) by introducing `NEXT_PUBLIC_LIVEKIT_URL` via `.env` and a dedicated local/prod override file pair.
+
