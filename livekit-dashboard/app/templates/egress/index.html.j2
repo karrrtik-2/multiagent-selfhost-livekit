@@ -1,0 +1,370 @@
+{% extends "base.html.j2" %}
+
+{% block title %}Egress - LiveKit Dashboard{% endblock %}
+{% block page_title %}Egress{% endblock %}
+
+{% block page_subtitle %}
+<p class="page-subtitle">Recording & Streaming Jobs</p>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+  <div class="stat-card">
+    <div class="stat-label">
+      <i class="bi bi-record-circle"></i> Active Egress Jobs
+    </div>
+    <div class="stat-value info">
+      {{ egress_jobs|length }}
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">
+      <i class="bi bi-folder2-open"></i> Recordings (server)
+    </div>
+    <div class="stat-value info">
+      {{ recordings_count }}
+    </div>
+  </div>
+</div>
+
+<div id="egress-table">
+
+  <!-- Active Egress Jobs -->
+  <div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="card-title">
+        <i class="bi bi-broadcast"></i> Active egress jobs
+      </h5>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#startEgressModal">
+          <i class="bi bi-record-circle"></i> Start Egress
+        </button>
+      </div>
+    </div>
+
+    <div class="card-body">
+      {% if egress_jobs %}
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Egress ID</th>
+                <th>Room</th>
+                <th>Status</th>
+                <th>Started</th>
+                <th>Ended</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for j in egress_jobs %}
+                {% set egress_id = (j.egress_id if j.egress_id is defined else j["egress_id"]) %}
+                {% set room_name = (j.room_name if j.room_name is defined else j["room_name"]) %}
+                {% set status = (j.status if j.status is defined else j["status"]) %}
+                {% set started_at = (j.started_at if j.started_at is defined else j.get("started_at")) %}
+                {% set ended_at = (j.ended_at if j.ended_at is defined else j.get("ended_at")) %}
+
+                <tr>
+                  <td><code>{{ egress_id }}</code></td>
+                  <td><code>{{ room_name }}</code></td>
+                  <td>
+                    <span class="badge bg-info text-dark">{{ status }}</span>
+                  </td>
+                  <td><small class="text-muted">{{ started_at }}</small></td>
+                  <td><small class="text-muted">{{ ended_at }}</small></td>
+                  <td class="text-end">
+                    <form method="post" action="/egress/{{ egress_id }}/stop" class="d-inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <button type="submit" class="btn btn-sm btn-outline-danger">
+                        Stop
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-muted">No active egress jobs.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recordings (server filesystem) -->
+  <div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="card-title">
+        <i class="bi bi-music-note-beamed"></i> Previous recordings (server)
+      </h5>
+      <small class="text-muted">Total: {{ recordings_count }}</small>
+    </div>
+
+    <div class="card-body">
+      {% if recordings %}
+        {% for r in recordings %}
+          <div class="mb-3 p-2 border rounded">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <code>{{ r.filename }}</code><br/>
+                <small class="text-muted">{{ r.size }} bytes | {{ r.mtime }}</small>
+              </div>
+
+              <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="/recordings/{{ r.filename }}"
+                   target="_blank">
+                  Download
+                </a>
+
+                <button class="btn btn-sm btn-primary"
+                        type="button"
+                        data-bs-toggle="modal"
+                        data-bs-target="#playRecordingModal"
+                        data-url="/recordings/{{ r.filename }}"
+                        data-filename="{{ r.filename }}">
+                  Play
+                </button>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-muted">No recordings found.</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+
+<!-- Start Egress Modal -->
+<div class="modal fade" id="startEgressModal" tabindex="-1" aria-labelledby="startEgressModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="startEgressModalLabel">Start Room Composite Egress</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form method="post" action="/egress/start" id="startEgressForm">
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+          <div class="form-group">
+            <label for="room_name" class="form-label">Room Name *</label>
+            <input type="text" class="form-control" id="room_name" name="room_name" placeholder="my-room" required>
+            <small class="text-muted">The LiveKit room to record</small>
+          </div>
+
+          <div class="form-group">
+            <label for="output_filename" class="form-label">Output Filename *</label>
+            <input type="text" class="form-control" id="output_filename" name="output_filename"
+                   placeholder="recording-{room}-{time}.mp4" required>
+            <small class="text-muted">Supports placeholders: {room}, {time}</small>
+          </div>
+
+          <div class="form-group">
+            <label for="layout" class="form-label">Layout</label>
+            <select class="form-select" id="layout" name="layout">
+              <option value="grid" selected>Grid</option>
+              <option value="speaker">Speaker</option>
+              <option value="single-speaker">Single Speaker</option>
+            </select>
+            <small class="text-muted">How participants should be arranged in the recording</small>
+          </div>
+
+          <div class="form-group mb-0">
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="audio_only" name="audio_only">
+              <label class="form-check-label" for="audio_only">Audio Only</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="video_only" name="video_only">
+              <label class="form-check-label" for="video_only">Video Only</label>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-record-circle"></i> Start Egress
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- Play Recording Modal -->
+<div class="modal fade" id="playRecordingModal" tabindex="-1" aria-labelledby="playRecordingModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="playRecordingModalLabel">Play Recording</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-2">
+          <small class="text-muted" id="playRecordingFilename"></small>
+        </div>
+
+        <!-- Video -->
+        <video id="playRecordingVideo" controls preload="metadata" style="width:100%; max-height:70vh;">
+          <source id="playRecordingSource" src="" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+
+        <!-- Audio -->
+        <audio id="playRecordingAudio" controls preload="metadata" style="width:100%; display:none;">
+          <source id="playRecordingAudioSource" src="" type="audio/ogg">
+        </audio>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<style>
+#startEgressModal .modal-dialog { max-width: 500px; }
+
+#startEgressModal .modal-content {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+}
+
+#startEgressModal .modal-header {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.25rem 1.5rem;
+}
+
+#startEgressModal .modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#startEgressModal .modal-body { padding: 1.5rem; }
+
+#startEgressModal .modal-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+  background-color: transparent;
+}
+
+#startEgressModal .form-group { margin-bottom: 1.25rem; }
+
+#startEgressModal .form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+#startEgressModal small {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 0.25rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Start Egress Modal
+  const egressModalElement = document.getElementById('startEgressModal');
+  if (egressModalElement) {
+    const egressModal = new bootstrap.Modal(egressModalElement, {
+      backdrop: true, keyboard: true, focus: true
+    });
+
+    const egressForm = document.getElementById('startEgressForm');
+
+    egressModalElement.addEventListener('hidden.bs.modal', function() {
+      if (egressForm) egressForm.reset();
+    });
+
+    egressModalElement.addEventListener('shown.bs.modal', function() {
+      const firstInput = egressForm.querySelector('input[name="room_name"]');
+      if (firstInput) firstInput.focus();
+    });
+  }
+
+  // Play Recording Modal
+  const playModalEl = document.getElementById('playRecordingModal');
+  const videoEl = document.getElementById('playRecordingVideo');
+  const videoSource = document.getElementById('playRecordingSource');
+  const audioEl = document.getElementById('playRecordingAudio');
+  const audioSource = document.getElementById('playRecordingAudioSource');
+  const filenameEl = document.getElementById('playRecordingFilename');
+
+  function mimeFromFilename(name) {
+    const n = (name || '').toLowerCase();
+    if (n.endsWith('.mp3')) return 'audio/mpeg';
+    if (n.endsWith('.wav')) return 'audio/wav';
+    if (n.endsWith('.ogg')) return 'audio/ogg';
+    if (n.endsWith('.opus')) return 'audio/opus';
+    if (n.endsWith('.m4a')) return 'audio/mp4';
+    if (n.endsWith('.webm')) return 'video/webm';
+    if (n.endsWith('.mp4') || n.endsWith('.m4v')) return 'video/mp4';
+    return '';
+  }
+
+  if (playModalEl) {
+    playModalEl.addEventListener('show.bs.modal', function(event) {
+      const btn = event.relatedTarget;
+      const url = btn.getAttribute('data-url');
+      const filename = btn.getAttribute('data-filename') || '';
+      filenameEl.textContent = filename;
+
+      const isAudio = /\.(mp3|wav|ogg|opus|m4a)$/i.test(filename);
+      const mime = mimeFromFilename(filename);
+
+      if (isAudio) {
+        videoEl.pause();
+        videoEl.style.display = 'none';
+
+        audioEl.style.display = 'block';
+        audioSource.src = url;
+        if (mime) audioSource.type = mime;
+
+        audioEl.load();
+        audioEl.play().catch(() => {});
+      } else {
+        audioEl.pause();
+        audioEl.style.display = 'none';
+
+        videoEl.style.display = 'block';
+        videoSource.src = url;
+        if (mime) videoSource.type = mime;
+
+        videoEl.load();
+        videoEl.play().catch(() => {});
+      }
+    });
+
+    playModalEl.addEventListener('hidden.bs.modal', function() {
+      videoEl.pause();
+      audioEl.pause();
+
+      videoSource.src = '';
+      audioSource.src = '';
+      videoEl.load();
+      audioEl.load();
+    });
+  }
+});
+</script>
+{% endblock %}

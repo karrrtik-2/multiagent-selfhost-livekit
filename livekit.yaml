@@ -1,0 +1,9 @@
+port: 7880
+rtc:
+    udp_port: 7882
+    port_range_start: 50000
+    port_range_end: 50010
+    use_external_ip: true
+keys:
+    devkey: secret
+    your_livekit_api_key: your_livekit_api_secret

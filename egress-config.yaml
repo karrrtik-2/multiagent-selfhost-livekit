@@ -1,0 +1,14 @@
+api_key: your_livekit_api_key
+api_secret: your_livekit_api_secret
+ws_url: wss://livekit.example.com
+redis:
+  address: 127.0.0.1:6379
+  db: 0
+log_level: info
+health_port: 8080
+prometheus_port: 8888
+template_port: 7980
+enable_chrome_sandbox: false
+insecure: true
+
+

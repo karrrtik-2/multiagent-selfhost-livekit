@@ -1,0 +1,25 @@
+    {
+      "dispatch_rule": {
+        "name": "Twilio per-call recording",
+        "trunk_ids": ["ST_YOUR_TRUNK_ID"],
+        "rule": {
+          "dispatchRuleIndividual": { "roomPrefix": "twilio-" }
+        },
+        "roomConfig": {
+          "agents": [
+            {
+              "agentName": "english",
+              "metadata": "{\"agent_file\":\"your_agent_prompt.txt\"}"
+            }
+          ],
+          "egress": {
+            "room": {
+              "audio_only": true,
+              "file_outputs": [
+                { "filepath": "/out/{room_name}-{time}.ogg" }
+              ]
+            }
+          }
+        }
+      }
+    }

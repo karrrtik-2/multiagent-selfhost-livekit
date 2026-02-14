@@ -1,0 +1,58 @@
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+    ports:
+      # Expose UDP ports for Audio/Video (CRITICAL)
+      - "50000-50010:50000-50010/udp"
+      # Expose Signaling port so CloudPanel can proxy to it
+      - "7880:7880"
+    networks:
+      - agent_network
+
+  agent:
+    build:
+      context: ./agent
+    restart: unless-stopped
+    environment:
+      # Internal connection to LiveKit (inside Docker)
+      - LIVEKIT_URL=ws://livekit:7880
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+      
+      # API Keys (Loaded from .env file)
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - SARVAM_API_KEY=${SARVAM_API_KEY}
+    depends_on:
+      - livekit
+    networks:
+      - agent_network
+
+  frontend:
+    build:
+      context: ./voice-assistant-frontend
+    restart: unless-stopped
+    ports:
+      # Expose Frontend port so CloudPanel can proxy to it
+      - "3000:3000"
+    environment:
+      # PUBLIC URL: This tells the User's Browser to connect via Secure WebSockets
+      # MUST start with wss:// and use your domain
+      - NEXT_PUBLIC_LIVEKIT_URL=wss://agent.example.com
+      
+      # Internal Server Config
+      - LIVEKIT_URL=ws://livekit:7880
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+      - NEXT_PUBLIC_LIVEKIT_API_KEY=devkey
+    networks:
+      - agent_network
+
+networks:
+  agent_network:
+    driver: bridge

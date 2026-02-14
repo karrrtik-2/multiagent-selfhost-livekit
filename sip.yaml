@@ -1,0 +1,11 @@
+# LiveKit API credentials
+api_key: your_livekit_api_key
+api_secret: your_livekit_api_secret
+# The internal URL to your LiveKit server
+ws_url: wss://livekit.example.com
+redis:
+  address: localhost:6379
+sip:
+  listen_port: 5060
+  rtp_port_start: 10000
+  rtp_port_end: 20000

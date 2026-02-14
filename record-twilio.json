@@ -1,0 +1,5 @@
+{
+  "room_name": "twilio-sip-room",
+  "audio_only": true,
+  "file_outputs": [{ "filepath": "/out/{room_name}-{time}.ogg" }]
+}
