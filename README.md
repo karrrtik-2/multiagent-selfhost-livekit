@@ -402,8 +402,3 @@ voice-ai/
 6. (Optional) Start dashboard from `livekit-dashboard/`
 7. (Optional) Apply SIP dispatch rule from `dispatch.json`
 8. Validate end-to-end voice session
-
----
-
-If you want, the next improvement is I can make your compose setup environment-driven (no manual URL editing between local/prod) by introducing `NEXT_PUBLIC_LIVEKIT_URL` via `.env` and a dedicated local/prod override file pair.
-
